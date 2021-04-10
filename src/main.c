@@ -1045,11 +1045,11 @@ static var_name_t *lookup_object_handle(
     return var_name->valid ? var_name : NULL;
 }
 
-static unsigned compute_checksum(
+static uint16_t compute_checksum(
         const void *data,
         size_t size) {
     unsigned sum = 0;
-    const mtp_byte_t *pointer = data;
+    const uint8_t *pointer = data;
     while (size--)
         sum += *pointer++;
     return sum;
