@@ -1,23 +1,16 @@
-define ti? ti
-namespace ti?
-pSpiRange   := 0D000h
-mpSpiRange  := 0F80000h
-spiValid    := 8
-pSpiValid   := pSpiRange + spiValid
-mpSpiValid  := mpSpiRange + spiValid
-spiStatus   := 12
-pSpiStatus  := pSpiRange + spiStatus
-mpSpiStatus := mpSpiRange + spiStatus
-spiData     := 24
-pSpiData    := pSpiRange + spiData
-mpSpiData   := mpSpiRange + spiData
-end namespace
+	private	ti.bSpiTxFifoBytes
+	private	ti.bmSpiChipEn
+	private	ti.mpSpiCtrl2
+	private	ti.spiData
+	private	ti.spiStatus
+include 'ti84pceg.inc'
 
+	section	.text
 	public	_spi_write
 _spi_write:
 	pop	hl,de
 	push	de,hl
-	ld	hl,ti.mpSpiValid or 1 shl 8
+	ld	hl,ti.mpSpiCtrl2 or ti.bmSpiChipEn shl 8
 	ld	(hl),h
 	ld	a,(de)
 	ld	c,a
@@ -40,7 +33,7 @@ end virtual
 	djnz	.shift
 	ld	l,ti.spiStatus+1
 .wait:
-	bit	15-8,(hl)
+	bit	ti.bSpiTxFifoBytes+3-8,(hl)
 	jq	nz,.wait
 .enter:
 	dec	c

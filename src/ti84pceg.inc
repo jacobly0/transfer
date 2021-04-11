@@ -4133,6 +4133,114 @@ namespace ti?
 ?pBlLevel		:= 0B024h
 ?mpBlLevel		:= 0F60024h
 
+;SPI Ports
+;-----------------------------------
+?pSpiRange		:= 0D000h
+?mpSpiRange		:= 0F80000h
+
+?spiCtrl0		:= 000h
+?pSpiCtrl0		:= pSpiRange + spiCtrl0
+?mpSpiCtrl0		:= mpSpiRange + spiCtrl0
+?bSpiClkPolarity		:= 0
+?bmSpiClkPolarity	:= 1 shl bSpiClkPolarity
+?bSpiClkPhase		:= 1
+?bmSpiClkPhase		:= 1 shl bSpiClkPhase
+?bSpiOpMode		:= 2
+?bmSpiSlave		:= 0 shl bSpiOpMode
+?bmSpiMaster		:= 3 shl bSpiOpMode
+?bmSpiSlaveMono		:= 0 shl bSpiOpMode
+?bmSpiSlaveStereo	:= 1 shl bSpiOpMode
+?bmSpiMasterMono		:= 2 shl bSpiOpMode
+?bmSpiMasterStereo	:= 3 shl bSpiOpMode
+?bmSpiOpMode		:= 3 shl bSpiOpMode
+?bSpiFsJustify		:= 4
+?bmSpiFsJustify		:= 1 shl bSpiFsJustify
+?bSpiFsPolarity		:= 5
+?bmSpiFsPolarity		:= 1 shl bSpiFsPolarity
+?bSpiLsb			:= 6
+?bmSpiLsb		:= 1 shl bSpiLsb
+?bSpiLoopback		:= 7
+?bmSpiLoopback		:= 1 shl bSpiLoopback
+?bSpiFsDist		:= 8
+?bmSpiFsDist		:= 3 shl bSpiFsDist
+?bSpiFlash		:= 11
+?bmSpiFlash		:= 1 shl bSpiFlash
+?bSpiFrFmt		:= 12
+?spiSspFrFmt		:= 0 shl bSpiFrFmt
+?spiSpiFrFmt		:= 1 shl bSpiFrFmt
+?spiMicrowaveFrFmt	:= 2 shl bSpiFrFmt
+?spiI2sFrFmt		:= 3 shl bSpiFrFmt
+?bmSpiFrFmt		:= 3 shl bSpiFrFmt
+
+?spiCtrl1		:= 004h
+?pSpiCtrl1		:= pSpiRange + spiCtrl1
+?mpSpiCtrl1		:= mpSpiRange + spiCtrl1
+?spiClkDiv		:= spiCtrl1 + 0
+?pSpiClkDiv		:= pSpiRange + spiClkDiv
+?mpSpiClkDiv		:= mpSpiRange + spiClkDiv
+?bSpiClkDiv		:= 0
+?bmSpiClkDiv		:= 0FFFFh shl bSpiClkDiv
+?spiDataWidth		:= spiCtrl1 + 2
+?pSpiDataWidth		:= pSpiRange + spiDataWidth
+?mpSpiDataWidth		:= mpSpiRange + spiDataWidth
+?bSpiDataWidth		:= 0
+?bmSpiDataWidth		:= 01Fh shl bSpiDataWidth
+?spiPadWidth		:= spiCtrl1 + 3
+?pSpiPadWidth		:= pSpiRange + spiPadWidth
+?mpSpiPadWidth		:= mpSpiRange + spiPadWidth
+?bSpiPadWidth		:= 0
+?bmSpiPadWidth		:= 0FFh shl bSpiPadWidth
+
+?spiCtrl2		:= 008h
+?pSpiCtrl2		:= pSpiRange + spiCtrl2
+?mpSpiCtrl2		:= mpSpiRange + spiCtrl2
+?bSpiChipEn		:= 0
+?bmSpiChipEn		:= 1 shl bSpiChipEn
+?bSpiTxDataOutEn		:= 1
+?bmSpiTxDataOutEn	:= 1 shl bSpiTxDataOutEn
+?bSpiRxClr		:= 2
+?bmSpiRxClr		:= 1 shl bSpiRxClr
+?bSpiTxClr		:= 3
+?bmSpiTxClr		:= 1 shl bSpiTxClr
+?bSpiChipReset		:= 6
+?bmSpiChipReset		:= 1 shl bSpiChipReset
+?bSpiRxEn		:= 7
+?bmSpiRxEn		:= 1 shl bSpiRxEn
+?bSpiTxEn		:= 8
+?bmSpiTxEn		:= 1 shl bSpiTxEn
+?bSpiFs			:= 9
+?bmSpiFs			:= 1 shl bSpiFs
+?bSpiCs			:= 10
+?bmSpiCs			:= 3 shl bSpiCs
+
+?spiStatus		:= 00Ch
+?pSpiStatus		:= pSpiRange + spiStatus
+?mpSpiStatus		:= mpSpiRange + spiStatus
+?bSpiRxFifoFull		:= 0
+?bmSpiRxFifoFull		:= 1 shl bSpiRxFifoFull
+?bSpiTxFifoNotFull	:= 1
+?bmSpiTxFifoNotFull	:= 1 shl bSpiTxFifoNotFull
+?bSpiChipBusy		:= 2
+?bmSpiChipBusy		:= 1 shl bSpiChipBusy
+?bSpiRxFifoBytes		:= 4
+?bmSpiRxFifoBytes	:= 01Fh shl bSpiRxFifoBytes
+?bSpiTxFifoBytes		:= 12
+?bmSpiTxFifoBytes	:= 01Fh shl bSpiTxFifoBytes
+
+?spiIntCtrl		:= 010h
+?pSpiIntCtrl		:= pSpiRange + spiIntCtrl
+?mpSpiIntCtrl		:= mpSpiRange + spiIntCtrl
+
+?spiIntStatus		:= 014h
+?pSpiIntStatus		:= pSpiRange + spiIntStatus
+?mpSpiIntStatus		:= mpSpiRange + spiIntStatus
+
+?spiData			:= 018h
+?pSpiData		:= pSpiRange + spiData
+?mpSpiData		:= mpSpiRange + spiData
+?bSpiData		:= 0
+?bmSpiData		:= 0FFFFFFFFh
+
 ;Character Font Equates
 ;-------------------------------------
 ?LrecurN			:= 001h

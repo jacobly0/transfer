@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
         if (c >= U' ' && c <= U'~')
             fprintf(source, "%c", (char)c);
         else
-            fprintf(source, "\\x%02X", (uint8_t)c);
+            fprintf(source, "\\x%02hhX", (unsigned char)c);
         fprintf(source, "'\n");
         for (int sy = 0, dy = (face->size->metrics.ascender >> 6) - face->glyph->bitmap_top; sy != face->glyph->bitmap.rows; ++sy, ++dy) {
             for (int sx = 0, dx = face->glyph->bitmap_left; sx != face->glyph->bitmap.width; ++sx, ++dx) {
@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
             fprintf(source, "\t\t{ ");
             for (int y = 0; y != height_bytes; ++y) {
                 if (y) fprintf(source, ", ");
-                fprintf(source, "0x%02X", *p++);
+                fprintf(source, "0x%02hhX", (unsigned char)~*p++);
             }
             fprintf(source, " },\n");
         }

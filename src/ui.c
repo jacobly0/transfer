@@ -1,3 +1,5 @@
+#include "ui.h"
+
 #include "font.h"
 #include "spi.h"
 
@@ -13,34 +15,25 @@ static uint8_t row, col, swap;
 
 void ui_Init(void) {
     os_DisableAPD();
-    spi(DISPLAY_OFF);
+    ui_Cleanup();
     spi(SET_COL_ADDR,  spi16(0), spi16(LCD_HEIGHT - 1));
     spi(SET_PAGE_ADDR, spi16(0), spi16(LCD_WIDTH - 1));
     spi(MEM_ACC_CTL,   0x2C);
-    *(volatile uint8_t *)&lcd_Control = 0x25;
-    *(volatile uint8_t *volatile *)&lcd_UpBase = &buffer(0)[0][0];
     for (uint8_t i = 0; i <= 15; ++i) {
-        uint8_t component = 63 * (i ^ 15) / 15;
+        uint8_t component = 63 * i / 15;
         lcd_Palette[i] =
             (component &  1) << 15 |
             (component >> 1) << 10 |
             (component >> 1) <<  5 |
             (component >> 1) <<  0;
     }
-    memset(buffer(0), 0, sizeof(buffer(0)));
-    spi(DISPLAY_ON);
+    *(volatile uint8_t *)&lcd_Control = 0x25;
+    *(volatile uint8_t *volatile *)&lcd_UpBase = &buffer(0)[0][0];
 }
 
 void ui_Cleanup(void) {
-    spi(DISPLAY_OFF);
-    delay(1000 / 64);
-    *(volatile uint16_t *volatile *)&lcd_UpBase = lcd_Ram;
-    *(volatile uint8_t *)&lcd_Control = 0x2D;
-    spi(SET_COL_ADDR,  spi16(0), spi16(LCD_WIDTH - 1));
-    spi(SET_PAGE_ADDR, spi16(0), spi16(LCD_HEIGHT - 1));
-    spi(MEM_ACC_CTL,   0x08);
-    memset((uint16_t *)lcd_Ram, 0xFF, LCD_SIZE);
-    spi(DISPLAY_ON);
+    boot_ClearVRAM();
+    boot_TurnOn();
 }
 
 void outchar(char c) {
@@ -65,7 +58,7 @@ void outchar(char c) {
             memcpy(&buffer(0)[x][0], &buffer(1)[x][0],
                    FONT_HEIGHT_BYTES * STATIC_ROWS);
             memset(&buffer(0)[x][((LCD_HEIGHT / FONT_HEIGHT - 1) *
-                                  FONT_HEIGHT) >> 1], 0, FONT_HEIGHT_BYTES);
+                                  FONT_HEIGHT) >> 1], 0xFF, FONT_HEIGHT_BYTES);
         }
         *(volatile uint8_t *volatile *)&lcd_UpBase = &buffer(0)[0][0];
         lcd_IntAcknowledge = 1 << 2;
