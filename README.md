@@ -7,6 +7,11 @@ Running this program on the calculator will allow you to transfer variable files
 Windows 10/Ubuntu 20.04/Android with preinstalled software, or other OSes with various
 PTP or MTP transfer software.
 
+## Known Working Computer OSes
+- Windows 10 using the default file explorer, check under Computer after connecting.
+- Ubuntu 20.04 using the default Dolphin File Manager.
+- Android 11 using the builtin Files application, check notifications after connecting to open.
+
 ## Installation
 1. Send [TRANSFER.8xp release](https://github.com/jacobly0/transfer/releases/latest) and [nightly clibs.8xg from usbdrvce branch](https://jacobly.com/a/toolchain/usbdrvce/clibs.zip) to your calculator using other transfer software.
 1. Run `Asm(prgmTRANSFER)` and then plug-and-play with a usb cable to supported OSes, or using supported software.
