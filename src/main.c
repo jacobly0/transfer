@@ -1276,6 +1276,8 @@ DEFINE_CALLBACK(command) {
         return status_error(status);
     global->reset = false;
     if (transferred < sizeof(mtp_container_t) ||
+        global->transaction.container
+            .length.size != transferred ||
         global->transaction.container.type !=
             MTP_BT_COMMAND)
         return stall_data_endpoints(endpoint);
@@ -1288,16 +1290,17 @@ DEFINE_CALLBACK(command) {
                 global);
     mtp_byte_t params_size =
         transferred - sizeof(mtp_container_t);
-    if ((mtp_byte_t)(params_size % sizeof(mtp_param_t)) ||
+    if (params_size % sizeof(mtp_param_t) ||
         params_size > MTP_MAX_PARAMS * sizeof(mtp_param_t))
         return stall_data_endpoints(endpoint);
     memset(&global->transaction.payload.params[
                    params_size / sizeof(mtp_param_t)], 0,
            MTP_MAX_PARAMS * sizeof(mtp_param_t) - params_size);
-    if (global->transaction.container.code !=
-            MTP_OPR_SEND_OBJECT)
+    size_t pending_handle =
         global->transaction.pending
-            .send_object.handle = 0;
+            .send_object.handle;
+    global->transaction.pending
+        .send_object.handle = 0;
     switch (global->transaction.container.code) {
 #define MAX_PARAMS(max)                                        \
         do                                                     \
@@ -1611,6 +1614,8 @@ DEFINE_CALLBACK(command) {
                 endpoint, response, NULL, 0, global);
     }
     case MTP_OPR_SEND_OBJECT_INFO:
+        global->transaction.pending
+            .send_object.handle = pending_handle;
         global->transaction.state
             .send_object_info.state =
             SEND_OBJECT_INFO_CONTAINER_STATE;
@@ -1665,6 +1670,8 @@ DEFINE_CALLBACK(command) {
                 send_object_info_complete,
                 global);
     case MTP_OPR_SEND_OBJECT:
+        global->transaction.pending
+            .send_object.handle = pending_handle;
         global->transaction.state
             .send_object.response = MTP_RSP_OK;
         for (mtp_byte_t i = 0; i != MTP_MAX_PARAMS; ++i)
@@ -1976,7 +1983,7 @@ DEFINE_CALLBACK(send_object_info) {
             __attribute__((fallthrough));
         case SEND_OBJECT_INFO_DATA_STATE:
             if (global->transaction.state
-                .send_object_info.response !=
+                  .send_object_info.response !=
                 MTP_RSP_OK);
             else if (object_info_size <
                          sizeof(mtp_object_info_header_t))
@@ -1990,6 +1997,8 @@ DEFINE_CALLBACK(send_object_info) {
                     .send_object_info.response =
                     MTP_RSP_INVALID_OBJECT_FORMAT_CODE;
             else if (global->transaction.payload.object_info
+                         .object_compressed_size &&
+                     global->transaction.payload.object_info
                          .object_compressed_size <
                          offsetof(var_file_header_t,
                                   entry.data) +
@@ -1997,8 +2006,7 @@ DEFINE_CALLBACK(send_object_info) {
                 global->transaction.state
                     .send_object_info.response =
                     MTP_RSP_INVALID_DATASET;
-            else if (global->transaction.payload
-                         .object_info
+            else if (global->transaction.payload.object_info
                          .object_compressed_size >
                      offsetof(var_file_header_t,
                               entry.data) +
@@ -2006,6 +2014,12 @@ DEFINE_CALLBACK(send_object_info) {
                 global->transaction.state
                     .send_object_info.response =
                     MTP_RSP_OBJECT_TOO_LARGE;
+            else if (global->transaction.pending
+                         .send_object.handle)
+                global->transaction.state
+                    .send_object_info.params[2] =
+                    global->transaction.pending
+                        .send_object.handle;
             else if (!(global->transaction.state
                            .send_object_info.params[2] =
                            alloc_object_handle(global)))
@@ -2061,28 +2075,32 @@ DEFINE_CALLBACK(send_object_info) {
 }
 
 DEFINE_CALLBACK(send_object_container) {
-    if (status != USB_TRANSFER_COMPLETED) {
-        global->transaction.pending
-            .send_object.handle = 0;
+    if (status != USB_TRANSFER_COMPLETED)
         return status_error(status);
-    }
-    if (global->reset) {
-        global->transaction.pending
-            .send_object.handle = 0;
+    if (global->reset)
         return schedule_command(endpoint, global);
-    }
-    if ((transferred != sizeof(mtp_container_t) &&
-         transferred != MTP_MAX_BULK_PKT_SZ) ||
+    if (transferred < sizeof(mtp_container_t) ||
         global->transaction.container.length.size >
             sizeof(mtp_container_t) +
             offsetof(var_file_header_t,
                      entry.data) +
             0xFFFF + sizeof(uint16_t) ||
+        global->transaction.container.length.word <
+            transferred ||
+        (transferred != sizeof(mtp_container_t) &&
+         transferred != MTP_MAX_BULK_PKT_SZ &&
+         transferred != global->transaction
+             .container.length.word) ||
         global->transaction.container.type !=
             MTP_BT_DATA ||
         global->transaction.container.code !=
             MTP_OPR_SEND_OBJECT)
         return stall_data_endpoints(endpoint);
+    if (global->transaction.container.length.word ==
+            sizeof(mtp_container_t))
+        return schedule_ok_response(
+                endpoint,
+                NULL, 0, global);
     mtp_byte_t extra =
         global->transaction.state
             .send_object.extra =
@@ -2091,17 +2109,20 @@ DEFINE_CALLBACK(send_object_container) {
     memcpy(OBJECT_BUFFER,
            global->transaction.payload.buffer,
            extra);
+    if (extra && transferred != MTP_MAX_BULK_PKT_SZ)
+        return send_object_complete(
+                endpoint, status, extra, global);
     return usb_ScheduleBulkTransfer(
             endpoint,
             OBJECT_BUFFER + extra,
-            global->transaction.container.length.size -
+            global->transaction.container.length.word -
                 sizeof(mtp_container_t) - extra,
             send_object_complete,
             global);
 }
 
 DEFINE_CALLBACK(send_object) {
-    mtp_id_t handle =
+    size_t handle =
         global->transaction.pending
             .send_object.handle;
     global->transaction.pending
@@ -2229,6 +2250,7 @@ static usb_error_t usb_event(usb_event_t event,
         break;
     }
     case USB_HOST_CONFIGURE_EVENT:
+        global->session = 0;
         error = schedule_command(control, global);
         break;
     default:
@@ -2471,7 +2493,6 @@ int main(void) {
             global.max_name_id;
     }
     do {
-        global.session = 0;
         if (usb_Init(usb_event, &global, &descriptors,
                      USB_DEFAULT_INIT_FLAGS) != USB_SUCCESS)
             break;
