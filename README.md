@@ -9,7 +9,7 @@ PTP or MTP transfer software.
 
 ## Known Working Computer OSes
 - Windows 10 using the default file explorer, check under Computer after connecting.
-- Ubuntu 20.04 using the default Dolphin File Manager.
+- Ubuntu 20.04 using the default Gnome Files (nautilus) or Dolphin.
 - Android 11 using the builtin Files application, check notifications after connecting to open.
 
 ## Installation
