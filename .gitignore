@@ -1,4 +1,7 @@
+icon/ti83pce.ico
+icon/ti84pce.ico
 font/genfont
 src/font.*
+src/*_icon.*
 obj/*
 bin/*

@@ -14,6 +14,8 @@ typedef struct mtp_global mtp_global_t;
 #define usb_transfer_data_t mtp_global_t
 
 /* Includes */
+#include "ti83pce_icon.h"
+#include "ti84pce_icon.h"
 #include "ui.h"
 #include "var.h"
 
@@ -21,7 +23,7 @@ typedef struct mtp_global mtp_global_t;
 #include <fileioc.h>
 #include <usbdrvce.h>
 
-#include <debug.h>
+#include <compression.h>
 #include <tice.h>
 
 #include <inttypes.h>
@@ -38,7 +40,7 @@ typedef struct mtp_global mtp_global_t;
 
 #define COUNT_EACH(...) +1
 
-#define OBJECT_BUFFER \
+#define LARGE_BUFFER \
     ((void *)((mtp_byte_t *)lcd_Ram + LCD_WIDTH * LCD_HEIGHT))
 
 #define FOR_EACH_SUPP_OPR(X) \
@@ -63,10 +65,11 @@ typedef struct mtp_global mtp_global_t;
     X(OBJECT_ADDED)          \
     X(OBJECT_REMOVED)
 
-#define FOR_EACH_SUPP_DP(X)        \
-    X(uint8, BATTERY_LEVEL, RANGE) \
-    X(datetime, DATE_TIME, NONE)   \
-    X(uint32, PERCEIVED_DEVICE_TYPE, NONE)
+#define FOR_EACH_SUPP_DP(X)                \
+    X(uint8, BATTERY_LEVEL, RANGE)         \
+    X(datetime, DATE_TIME, NONE)           \
+    X(uint32, PERCEIVED_DEVICE_TYPE, NONE) \
+    X(auint8, DEVICE_ICON, NONE)
 
 #define FOR_EACH_SUPP_CF(X) \
     X(UNDEFINED)
@@ -110,31 +113,59 @@ typedef struct mtp_global mtp_global_t;
 #define get_arc_free_space_in_bytes \
     (os_ArcChk(), os_TempFreeArc)
 
-#define BATTERY_LEVEL_MIN  0
-#define BATTERY_LEVEL_MAX  4
-#define BATTERY_LEVEL_STEP 1
-#define BATTERY_LEVEL_DEF  0
-#define BATTERY_LEVEL_GET_SET 0
-#define BATTERY_LEVEL_GET(current) \
-    current = boot_GetBatteryStatus()
-#define BATTERY_LEVEL_SET(new)
+#define BATTERY_LEVEL_MIN(value)  value = 0
+#define BATTERY_LEVEL_MAX(value)  value = 4
+#define BATTERY_LEVEL_STEP(value) value = 1
+#define BATTERY_LEVEL_SIZE        sizeof
+#define BATTERY_LEVEL_DEF(value)  value = 0
+#define BATTERY_LEVEL_GET_SET     0
+#define BATTERY_LEVEL_GET(value) \
+    value = boot_GetBatteryStatus()
+#define BATTERY_LEVEL_SET(value) (void)0
 
-#define DATE_TIME_DEF {                        \
-        .length = lengthof(Lfactory_datetime), \
-        .string = Lfactory_datetime,           \
-    }
-#define DATE_TIME_GET_SET 1
-#define DATE_TIME_GET(current) \
-    get_datetime(current.string)
-#define DATE_TIME_SET(new)
+#define DATE_TIME_SIZE       sizeof
+#define DATE_TIME_DEF(value) do {        \
+        value.length =                   \
+            lengthof(Lfactory_datetime); \
+        memcpy(value.string,             \
+               Lfactory_datetime,        \
+               sizeof(value.string));    \
+    } while (0)
+#define DATE_TIME_GET_SET    1
+#define DATE_TIME_GET(value) \
+    get_datetime(value.string)
+#define DATE_TIME_SET(value) (void)0
 
-#define PERCEIVED_DEVICE_TYPE_DEF 0
-#define PERCEIVED_DEVICE_TYPE_GET_SET 0
-#define PERCEIVED_DEVICE_TYPE_GET(current) \
-    current = 3
-#define PERCEIVED_DEVICE_TYPE_SET(new)
+#define PERCEIVED_DEVICE_TYPE_SIZE       sizeof
+#define PERCEIVED_DEVICE_TYPE_DEF(value) value = 0
+#define PERCEIVED_DEVICE_TYPE_GET_SET    0
+#define PERCEIVED_DEVICE_TYPE_GET(value) value = 3
+#define PERCEIVED_DEVICE_TYPE_SET(value) (void)0
+
+#define DEVICE_ICON_SIZE(type) \
+    (sizeof(mtp_size_t) + global->device_icon_size)
+#define DEVICE_ICON_DEF        DEVICE_ICON_GET
+#define DEVICE_ICON_GET_SET    0
+#define DEVICE_ICON_GET(value) do {   \
+        value.num_elements =          \
+            global->device_icon_size; \
+        zx7_Decompress(               \
+                value.elements,       \
+                global->device_icon); \
+    } while (0)
+#define DEVICE_ICON_SET(value)
 
 /* MTP Types */
+
+typedef struct int128 {
+    int64_t high;
+    uint64_t low;
+} int128_t;
+
+typedef struct uint128 {
+    uint64_t high;
+    uint64_t low;
+} uint128_t;
 
 typedef uint8_t mtp_byte_t;
 typedef uint16_t mtp_version_t;
@@ -143,6 +174,23 @@ typedef uint32_t mtp_size_t;
 typedef uint32_t mtp_id_t;
 typedef uint32_t mtp_param_t;
 typedef uint64_t mtp_uint64_t;
+
+#define DECLARE_ARRAY_TYPE(name) \
+    typedef struct a##name {     \
+        mtp_size_t num_elements; \
+        name##_t elements[];     \
+    } a##name##_t;
+DECLARE_ARRAY_TYPE(uint8)
+DECLARE_ARRAY_TYPE(int8)
+DECLARE_ARRAY_TYPE(uint16)
+DECLARE_ARRAY_TYPE(int16)
+DECLARE_ARRAY_TYPE(uint32)
+DECLARE_ARRAY_TYPE(int32)
+DECLARE_ARRAY_TYPE(uint64)
+DECLARE_ARRAY_TYPE(int64)
+DECLARE_ARRAY_TYPE(uint128)
+DECLARE_ARRAY_TYPE(int128)
+
 #define DECLARE_TRUNC_TYPE(name)     \
     typedef union mtp_trunc_##name { \
         mtp_##name##_t name;         \
@@ -644,6 +692,13 @@ typedef enum mtp_object_property_code {
 
 /* MTP Structures */
 
+typedef struct mtp_device_property_description {
+    mtp_enum_t device_property_code;
+    mtp_enum_t datatype;
+    mtp_byte_t get_set;
+    mtp_byte_t values[];
+} mtp_device_property_description_t;
+
 typedef struct mtp_object_info_header {
     mtp_trunc_id_t storage_id;
     mtp_enum_t object_format;
@@ -793,6 +848,8 @@ struct mtp_global {
     mtp_transaction_t transaction;
     mtp_event_t events[MTP_MAX_PENDING_EVENTS];
     /* MTP Info */
+    size_t device_icon_size;
+    const void *device_icon;
     size_t device_info_size;
     const mtp_device_info_t *device_info;
 #define DECLARE_STORAGE_INFO(name) \
@@ -827,6 +884,7 @@ DECLARE_CALLBACK(response);
 DECLARE_CALLBACK(event);
 
 /* Other Forward Function Declarations */
+
 usb_error_t wait_for_usb(mtp_global_t *global);
 
 /* MTP Function Definitions */
@@ -1108,7 +1166,7 @@ static int send_object(
         mtp_global_t *global) {
     size += global->transaction.state
         .send_object.extra;
-    const var_file_header_t *header = OBJECT_BUFFER;
+    const var_file_header_t *header = LARGE_BUFFER;
     if (size <=
             offsetof(var_file_header_t, entry.data) +
             sizeof(uint16_t) ||
@@ -1708,40 +1766,35 @@ DEFINE_CALLBACK(command) {
         break;
     case MTP_OPR_GET_DEVICE_PROP_DESC:
         MAX_PARAMS(1);
-#define DECLARE_FORM_NONE(type)
-#define DECLARE_FORM_RANGE(type) \
-        type##_t minimum_value;  \
-        type##_t maximum_value;  \
-        type##_t step_size;
-#define DEFINE_FORM_NONE(name)
-#define DEFINE_FORM_RANGE(name)      \
-        .minimum_value = name##_MIN, \
-        .maximum_value = name##_MAX, \
-        .step_size = name##_STEP,
+#define INIT_FORM_NONE(type, name, value)  (void)0
+#define INIT_FORM_RANGE(type, name, value) do { \
+            name##_MIN((*(type##_t *)value));   \
+            value += name##_SIZE(type##_t);     \
+            name##_MAX((*(type##_t *)value));   \
+            value += name##_SIZE(type##_t);     \
+            name##_STEP((*(type##_t *)value));  \
+            value += name##_SIZE(type##_t);     \
+        } while (0)
 #define GET_DEVICE_PROP_DESC_RESPONSE(type, name, form) \
         if (global->transaction.payload.params[0] ==    \
                 MTP_DP_##name) {                        \
-            static struct name##_DESC {                 \
-                mtp_enum_t device_property_code;        \
-                mtp_enum_t datatype;                    \
-                mtp_byte_t get_set;                     \
-                type##_t factory_default_value;         \
-                type##_t current_value;                 \
-                mtp_byte_t form_flag;                   \
-                DECLARE_FORM_##form(type)               \
-            } name = {                                  \
-                .device_property_code = MTP_DP_##name,  \
-                .datatype = MTP_TC_##type,              \
-                .get_set = name##_GET_SET,              \
-                .factory_default_value = name##_DEF,    \
-                .current_value = name##_DEF,            \
-                .form_flag = MTP_FORM_##form,           \
-                DEFINE_FORM_##form(name)                \
-            };                                          \
-            name##_GET(name.current_value);             \
+            mtp_device_property_description_t *desc =   \
+                LARGE_BUFFER;                           \
+            desc->device_property_code = MTP_DP_##name; \
+            desc->datatype = MTP_TC_##type;             \
+            desc->get_set = name##_GET_SET;             \
+            mtp_byte_t *value = desc->values;           \
+            name##_DEF((*(type##_t *)value));           \
+            value += name##_SIZE(type##_t);             \
+            name##_GET((*(type##_t *)value));           \
+            value += name##_SIZE(type##_t);             \
+            *value++ = MTP_FORM_##form;                 \
+            INIT_FORM_##form(type, name, value);        \
             return schedule_data_in_response(           \
-                    endpoint, &name,                    \
-                    sizeof(name), global);              \
+                    endpoint,                           \
+                    LARGE_BUFFER,                       \
+                    value - (mtp_byte_t *)LARGE_BUFFER, \
+                    global);                            \
         }
         FOR_EACH_SUPP_DP(GET_DEVICE_PROP_DESC_RESPONSE)
         return schedule_error_response(
@@ -1753,11 +1806,12 @@ DEFINE_CALLBACK(command) {
 #define GET_DEVICE_PROP_VALUE_RESPONSE(type, name, form) \
         if (global->transaction.payload.params[0] ==     \
                 MTP_DP_##name) {                         \
-            type##_t current;                            \
-            name##_GET(current);                         \
+            name##_GET((*(type##_t *)LARGE_BUFFER));     \
             return schedule_data_in_response(            \
-                    endpoint, &current,                  \
-                    sizeof(current), global);            \
+                    endpoint,                            \
+                    LARGE_BUFFER,                        \
+                    name##_SIZE(type##_t),               \
+                    global);                             \
         }
         FOR_EACH_SUPP_DP(GET_DEVICE_PROP_VALUE_RESPONSE)
         return schedule_error_response(
@@ -2103,7 +2157,7 @@ DEFINE_CALLBACK(send_object_container) {
             .send_object.extra =
         transferred -
             sizeof(mtp_container_t);
-    memcpy(OBJECT_BUFFER,
+    memcpy(LARGE_BUFFER,
            global->transaction.payload.buffer,
            extra);
     if (extra && transferred != MTP_MAX_BULK_PKT_SZ)
@@ -2111,7 +2165,7 @@ DEFINE_CALLBACK(send_object_container) {
                 endpoint, status, extra, global);
     return usb_ScheduleBulkTransfer(
             endpoint,
-            OBJECT_BUFFER + extra,
+            LARGE_BUFFER + extra,
             global->transaction.container.length.word -
                 sizeof(mtp_container_t) - extra,
             send_object_complete,
@@ -2443,9 +2497,13 @@ int main(void) {
     };
     for (mtp_byte_t i = 0; i != MTP_MAX_PENDING_EVENTS; ++i)
         global.events[i].container.type = MTP_BT_EVENT;
-    if (info->hardwareType & 1)
+    if (info->hardwareType & 1) {
+        global.device_icon_size = ti83pce_icon_uncompressed_size;
+        global.device_icon = ti83pce_icon;
         global.device_info_size = sizeof(mtp_device_info_t);
-    else {
+    } else {
+        global.device_icon_size = ti84pce_icon_uncompressed_size;
+        global.device_icon = ti84pce_icon;
         *(mtp_byte_t *)&device.bcdDevice = 0x40; /* 2.40 */
         device_info.model_length = lengthof(Lproduct84);
         memcpy(device_info.model, Lproduct84, sizeof(Lproduct84));
