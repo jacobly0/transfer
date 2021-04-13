@@ -5,8 +5,8 @@
 NAME ?= TRANSFER
 ICON ?= transfer.png
 DESCRIPTION ?= "Variable Transfer Program"
-COMPRESSED ?= NO
-ARCHIVED ?= NO
+COMPRESSED ?= YES
+ARCHIVED ?= YES
 
 CFLAGS ?= -Wall -Wextra -Oz
 CXXFLAGS ?= -Wall -Wextra -Oz
