@@ -819,6 +819,7 @@ DECLARE_CALLBACK(get_object);
 DECLARE_CALLBACK(send_object_info);
 DECLARE_CALLBACK(send_object_container);
 DECLARE_CALLBACK(send_object);
+DECLARE_CALLBACK(zlp_data_in);
 DECLARE_CALLBACK(final_data_in);
 DECLARE_CALLBACK(response);
 DECLARE_CALLBACK(event);
@@ -955,33 +956,6 @@ static usb_error_t schedule_ok_response(
             params, param_count, global);
 }
 
-static usb_error_t schedule_data_in_response(
-        usb_endpoint_t endpoint,
-        const void *data,
-        size_t data_size,
-        mtp_global_t *global) {
-    usb_error_t error;
-    global->transaction.container.length.size =
-        sizeof(mtp_container_t) +
-        data_size;
-    global->transaction.container.type =
-        MTP_BT_DATA;
-    error = usb_ScheduleBulkTransfer(
-            endpoint = get_endpoint(
-                    endpoint, MTP_EP_DATA_IN),
-            &global->transaction,
-            sizeof(mtp_container_t),
-            NULL,
-            global);
-    if (error) return error;
-    return usb_ScheduleBulkTransfer(
-            endpoint,
-            (void *)data,
-            data_size,
-            final_data_in_complete,
-            global);
-}
-
 static usb_error_t schedule_data_in(
         usb_endpoint_t endpoint,
         size_t data_size,
@@ -999,6 +973,27 @@ static usb_error_t schedule_data_in(
             sizeof(mtp_container_t),
             complete,
             global);
+}
+
+static usb_error_t schedule_data_in_response(
+        usb_endpoint_t endpoint,
+        const void *data,
+        size_t data_size,
+        mtp_global_t *global) {
+    usb_error_t error = schedule_data_in(
+            endpoint, data_size, NULL, global);
+    if (error == USB_SUCCESS)
+        error = usb_ScheduleBulkTransfer(
+            get_endpoint(endpoint,
+                         MTP_EP_DATA_IN),
+            (void *)data,
+            data_size,
+            data_size &&
+            !(data_size % MTP_MAX_BULK_PKT_SZ)
+            ? zlp_data_in_complete
+            : final_data_in_complete,
+            global);
+    return error;
 }
 
 static usb_error_t status_error(
@@ -2142,6 +2137,18 @@ DEFINE_CALLBACK(send_object) {
         return response;
     return schedule_response(
             endpoint, response, NULL, 0, global);
+}
+
+DEFINE_CALLBACK(zlp_data_in) {
+    (void)transferred;
+    if (status != USB_TRANSFER_COMPLETED)
+        return status_error(status);
+    if (global->reset)
+        return schedule_command(endpoint, global);
+    return usb_ScheduleBulkTransfer(
+            endpoint, NULL, 0,
+            final_data_in_complete,
+            global);
 }
 
 DEFINE_CALLBACK(final_data_in) {
