@@ -2263,7 +2263,7 @@ int main(void) {
     static mtp_global_t global;
     usb_error_t error;
     ui_Init();
-    printf("        *** TRANSFER ***\n"
+    printf("        TRANSFER v0.0.1b\n"
            "       Connect USB to PC.\n"
            "     Press [clear] to exit.\n"
            "--------------------------------");
