@@ -69,7 +69,7 @@ uint8_t create_var(const var_name_t *var_name,
                    const void *data, size_t size);
 uint8_t arc_unarc_var(const var_name_t *var_name);
 uint8_t get_var_file_name(const var_name_t *var_name,
-                          wchar_t file_name[13]);
+                          wchar_t file_name[MAX_FILE_NAME_LENGTH]);
     
 #ifdef __cplusplus
 }
