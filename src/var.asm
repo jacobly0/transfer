@@ -6,9 +6,8 @@
 	private	ti.DataSize
 	private	ti.DelVarArc
 	private	ti.EquObj
-	private	ti.flags
-	private	ti.GroupObj
 	private	ti.Get_Tok_Strng
+	private	ti.GroupObj
 	private	ti.GroupObj
 	private	ti.Mov9ToOP1
 	private	ti.OP1
@@ -18,13 +17,19 @@
 	private	ti.ProgObj
 	private	ti.ProtProgObj
 	private	ti.PushErrorHandler
+	private	ti.flags
 	private	ti.tAns
+	private	ti.tExtTok
 	private	ti.tRecurn
 	private	ti.tVarLst
 	private	ti.tVarOut
 include 'ti84pceg.inc'
 
+	private ImageObj
+	private tVarImage1
 	private	varTypeMask
+ImageObj := $1A
+tVarImage1 := $50
 varTypeMask := $3F
 
 	private	DELETE_VAR_NOT_DELETED
@@ -260,6 +265,8 @@ _get_var_file_name:
 	sub	a,(ti.AppVarObj-ti.ProtProgObj-1) shl 1
 	sub	a,(ti.GroupObj-ti.AppVarObj+1) shl 1
 	jq	c,.named
+	sub	a,(ImageObj-ti.GroupObj-1) shl 1
+	jq	z,.image
 	ld	a,(de)
 	cp	a,'.'
 	jq	z,.namedEnter
@@ -336,6 +343,12 @@ _get_var_file_name:
 	ld	a,13
 	sub	a,c
 	ret
+.image:
+	inc	de
+	ld	a,(de)
+	ld	de,_image_name+1
+	add	a,tVarImage1
+	ld	(de),a
 .list:
 	dec	de
 .token:
@@ -349,6 +362,10 @@ _get_var_file_name:
 	jq	.named
 
 	section	.data
+	public	_image_name
+_image_name:
+	db	ti.tExtTok,tVarImage1
+
 	public	_var_extensions
 _var_extensions:
 	db	"xnxlxmxyxsxpxpci"
