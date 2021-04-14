@@ -5,14 +5,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <uchar.h>
 
 int main(int argc, char **argv) {
     FT_Library library;
     FT_Error error;
     FT_Face face;
     if ((error = FT_Init_FreeType(&library)) ||
-        (error = FT_New_Face(library, "/usr/share/fonts/fonts-master/apache/robotomono/RobotoMono-Medium.ttf", 0, &face)) ||
+        ((error = FT_New_Face(library, "/usr/share/fonts/fonts-master/apache/robotomono/RobotoMono-Medium.ttf", 0, &face)) &&
+         (error = FT_New_Face(library, "/Library/Fonts/RobotoMono-Medium.ttf", 0, &face))) ||
         (error = FT_Set_Char_Size(face, 0, 550, 0, 141)) ||
         (error = FT_Load_Char(face, U'w', FT_LOAD_DEFAULT))) return error;
     int width = face->glyph->advance.x >> 6, height = face->size->metrics.height >> 6, height_bytes = (height + 1) >> 1;
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
             "const uint8_t font[0x100][FONT_WIDTH][FONT_HEIGHT_BYTES] = {\n");
     uint8_t *bitmap = calloc(width, height_bytes);
     if (!bitmap) return 1;
-    for (char32_t c = U'\0'; c <= U'\xFF'; ++c) {
+    for (uint32_t c = U'\0'; c <= U'\xFF'; ++c) {
         memset(bitmap, 0, width * height_bytes);
         if ((error = FT_Load_Char(face, c, FT_LOAD_DEFAULT)) ||
             (error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))) return error;
