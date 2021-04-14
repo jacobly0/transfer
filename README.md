@@ -28,7 +28,8 @@ PTP or MTP transfer software.
 - [ ] Receiving a rom dump.
 - [ ] Copying variables in either RAM or Archive to another name in either RAM or Archive.
 - [x] Getting free space in RAM or Archive.
-- [x] Geting and seting the current time.
-- [x] Geting the current battery level.
-- [ ] Geting a device icon for displaying in MTP program UIs.
+- [x] Getting the current time.
+- [ ] Setting the current time.
+- [x] Getting the current battery level.
+- [ ] ~~Getting a device icon for displaying in MTP program UIs.~~
 - [ ] Optimize for a smaller program size.
