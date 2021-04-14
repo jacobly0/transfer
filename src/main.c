@@ -59,7 +59,9 @@ typedef struct mtp_global mtp_global_t;
     X(SET_DEVICE_PROP_VALUE) \
     X(MOVE_OBJECT)
 
-#define FOR_EACH_SUPP_EVT(X)
+#define FOR_EACH_SUPP_EVT(X) \
+    X(OBJECT_ADDED)          \
+    X(OBJECT_REMOVED)
 
 #define FOR_EACH_SUPP_DP(X)        \
     X(uint8, BATTERY_LEVEL, RANGE) \
@@ -1061,11 +1063,9 @@ static void get_datetime(
     boot_GetTime(&second, &minute, &hour);
     sprintf(string, "%04u%02u%02uT%02u%02u%02u",
             year, month, day, hour, minute, second);
-    do {
-        *(char *)result = *pointer;
-        ++result;
-        ++pointer;
-    } while (--i);
+    do
+        *(char *)result++ = *pointer++;
+    while (--i);
 }
 
 static int delete_object(
@@ -1749,6 +1749,7 @@ DEFINE_CALLBACK(command) {
                 MTP_RSP_DEVICE_PROP_NOT_SUPPORTED,
                 global);
     case MTP_OPR_GET_DEVICE_PROP_VALUE:
+        MAX_PARAMS(1);
 #define GET_DEVICE_PROP_VALUE_RESPONSE(type, name, form) \
         if (global->transaction.payload.params[0] ==     \
                 MTP_DP_##name) {                         \
@@ -1764,6 +1765,7 @@ DEFINE_CALLBACK(command) {
                 MTP_RSP_DEVICE_PROP_NOT_SUPPORTED,
                 global);
     case MTP_OPR_SET_DEVICE_PROP_VALUE:
+        MAX_PARAMS(1);
         usb_ScheduleBulkTransfer(
                 endpoint,
                 &global->transaction.payload,
