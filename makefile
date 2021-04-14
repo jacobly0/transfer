@@ -2,6 +2,8 @@
 # Makefile Options
 # ----------------------------
 
+CC = clang
+
 NAME ?= TRANSFER
 ICON ?= transfer.png
 DESCRIPTION ?= "Variable Transfer Program"
@@ -27,4 +29,4 @@ src/font.h src/font.c: font/genfont
 	@$<
 
 font/genfont: font/genfont.c
-	@clang -O3 -flto $< `pkg-config --cflags --libs freetype2` -o $@
+	@$(CC) -O3 -flto $< `pkg-config --cflags --libs freetype2` -o $@
