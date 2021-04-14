@@ -1,4 +1,4 @@
-# prgmTRANSFER v0.0.1b
+# prgmTRANSFER v0.0.2b
 
 ### This software is still in beta, no liability for corrupted or lost files, etc!
 
