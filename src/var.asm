@@ -124,11 +124,16 @@ _get_var_data_ptr:
 	ex	de,hl
 	bit	15,bc
 	ret	nz
-	ld	bc,9
-	add	hl,bc
-	ld	c,(hl)
-	add	hl,bc
-	inc	hl
+	ex	de,hl
+	call	ti.Sym_Prog_non_t_Lst
+	jq	z,.named
+	ld	c,2
+.named:
+	ex	de,hl
+	ld	de,10
+	add	hl,de
+	ld	e,c
+	add	hl,de
 	ret
 
 	section	.text
