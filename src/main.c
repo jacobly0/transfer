@@ -842,18 +842,12 @@ static usb_endpoint_t get_endpoint(
 static usb_error_t stall_data_endpoints(
         usb_endpoint_t endpoint) {
     printf("stalling data endpoints\n");
-#if 0
-    usb_error_t error;
-    error = usb_StallEndpoint(
+    usb_error_t error = usb_SetEndpointHalt(
             get_endpoint(endpoint, MTP_EP_DATA_IN));
     if (error == USB_SUCCESS)
-        error = usb_StallEndpoint(
+        error = usb_SetEndpointHalt(
                 get_endpoint(endpoint, MTP_EP_DATA_OUT));
     return error;
-#else
-    (void)endpoint;
-    return USB_ERROR_FAILED;
-#endif
 }
 
 static usb_error_t schedule_event(
@@ -2199,7 +2193,7 @@ static usb_error_t usb_event(usb_event_t event,
               (USB_DEVICE_TO_HOST |
                USB_STANDARD_REQUEST |
                USB_RECIPIENT_DEVICE) &&
-            setup->bRequest == USB_GET_DESCRIPTOR &&
+            setup->bRequest == USB_GET_DESCRIPTOR_REQUEST &&
             setup->wValue == 0x03EE && !setup->wIndex) {
             DEFINE_STRING_DESCRIPTOR(const, os_specific);
             error = usb_ScheduleTransfer(
