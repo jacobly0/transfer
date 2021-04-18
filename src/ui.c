@@ -8,9 +8,7 @@
 #include <string.h>
 #include <tice.h>
 
-#define STATIC_ROWS 4
-
-static uint8_t row, col, swap;
+static uint8_t static_rows, row, col, swap;
 #define buffer(n) (*(uint8_t (*)[4][LCD_WIDTH][LCD_HEIGHT >> 1])lcd_Ram)[(n) ^ swap]
 
 void ui_Init(void) {
@@ -29,6 +27,10 @@ void ui_Init(void) {
     }
     *(volatile uint8_t *)&lcd_Control = 0x25;
     *(volatile uint8_t *volatile *)&lcd_UpBase = &buffer(0)[0][0];
+}
+
+void ui_Lock(void) {
+    static_rows = row;
 }
 
 void ui_Cleanup(void) {
@@ -56,7 +58,7 @@ void outchar(char c) {
                sizeof(buffer(1)) - FONT_HEIGHT_BYTES);
         for (unsigned x = 0; x != LCD_WIDTH; ++x) {
             memcpy(&buffer(0)[x][0], &buffer(1)[x][0],
-                   FONT_HEIGHT_BYTES * STATIC_ROWS);
+                   FONT_HEIGHT_BYTES * static_rows);
             memset(&buffer(0)[x][((LCD_HEIGHT / FONT_HEIGHT - 1) *
                                   FONT_HEIGHT) >> 1], 0xFF, FONT_HEIGHT_BYTES);
         }

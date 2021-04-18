@@ -14,6 +14,7 @@ typedef struct mtp_global mtp_global_t;
 #define usb_transfer_data_t mtp_global_t
 
 /* Includes */
+#include "font.h"
 #include "ui.h"
 #include "var.h"
 
@@ -35,6 +36,8 @@ typedef struct mtp_global mtp_global_t;
 /* Macros */
 
 #define lengthof(array) (sizeof(array) / sizeof(*(array)))
+
+#define charsof(literal) (lengthof(literal) - 1)
 
 #define COUNT_EACH(...) +1
 
@@ -2266,10 +2269,19 @@ int main(void) {
     static mtp_global_t global;
     usb_error_t error;
     ui_Init();
-    printf("        TRANSFER v0.0.2b\n"
-           "       Connect USB to PC.\n"
-           "     Press [clear] to exit.\n"
-           "--------------------------------");
+#define CENTER(string)                    \
+    printf("%*s%.*s",                     \
+           (LCD_WIDTH / FONT_WIDTH +      \
+            charsof(string)) / 2,         \
+           string,                        \
+           charsof(string) %              \
+           (LCD_WIDTH / FONT_WIDTH) != 0, \
+           "\n");
+    CENTER("TRANSFER " VERSION);
+    CENTER("Connect USB to PC.");
+    CENTER("Press [clear] to exit.");
+    CENTER("--------------------------------");
+    ui_Lock();
     static mtp_device_info_t device_info = {
         .standard_version = 100, /* 1.00 */
         .mtp_vendor_extension_id = 6,
