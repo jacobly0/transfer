@@ -26,7 +26,9 @@ endif
 include $(CEDEV)/meta/makefile.mk
 
 src/font.h src/font.c: font/genfont
-	@$<
+	$(Q)echo [running] $<
+	$(Q)$<
 
 font/genfont: font/genfont.c
-	@$(CC) -O3 -flto $< `pkg-config --cflags --libs freetype2` -o $@
+	$(Q)echo [compiling] $<
+	$(Q)$(CC) -O3 -flto $< `pkg-config --cflags --libs freetype2` -o $@
