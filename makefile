@@ -13,7 +13,7 @@ ARCHIVED ?= YES
 CFLAGS ?= -Wall -Wextra -Oz
 CXXFLAGS ?= -Wall -Wextra -Oz
 
-EXTRA_CSOURCES ?= $(if $(wildcard src/font.c),,src/font.c)
+EXTRA_CSOURCES ?= src/font.c
 EXTRA_USERHEADERS ?= src/ti84pceg.inc src/font.h
 EXTRA_CLEAN ?= src/font.c src/font.h font/genfont
 
