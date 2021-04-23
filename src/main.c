@@ -128,13 +128,13 @@ typedef struct mtp_global mtp_global_t;
     }
 #define DATE_TIME_GET_SET 1
 #define DATE_TIME_GET(current) \
-    get_datetime(current.string)
+    get_datetime(&current)
 #define DATE_TIME_SET(new)
 
 #define PERCEIVED_DEVICE_TYPE_DEF 0
 #define PERCEIVED_DEVICE_TYPE_GET_SET 0
 #define PERCEIVED_DEVICE_TYPE_GET(current) \
-    current = 3
+    current = 5
 #define PERCEIVED_DEVICE_TYPE_SET(new)
 
 /* MTP Types */
@@ -167,16 +167,16 @@ typedef usb_error_t(*mtp_transaction_callback_t)(
 #define Los_specific      L"MSFT100\1"
 #define Lmtp_extensions   L"microsoft.com: 1.0;"
 #define Lmanufacturer     L"Texas Instruments Incorporated"
-#define Lproduct          L"TI-83 Premium CE" /* default must be longer than alt */
-#define Lproduct84        L"TI-84 Plus CE"
-#define Ldevice_version   L"2.20"
+#define Lproduct          L"TI-84 Plus CE"
+#define Lproduct83        L"TI-83 Premium CE"
+#define Ldevice_version   L"255.255.255.65535"
 #define Lserial_number    L"0000000000000000"
 #define Lcharging_cfg     L"Charging"
 #define Lmtp_interface    L"MTP" /* magic string to aid detection */
 #define Lram_storage_desc L"RAM"
-#define Lram_volume_id    Lserial_number"R"
+#define Lram_volume_id    Lserial_number "R"
 #define Larc_storage_desc L"Archive"
-#define Larc_volume_id    Lserial_number"A"
+#define Larc_volume_id    Lserial_number "A"
 #define Lfactory_datetime L"20150101T000000"
 
 typedef enum string_id {
@@ -717,7 +717,8 @@ typedef struct mtp_device_info {
     mtp_byte_t manufacturer_length;
     wchar_t manufacturer[lengthof(Lmanufacturer)];
     mtp_byte_t model_length;
-    wchar_t model[lengthof(Lproduct)];
+    wchar_t model[lengthof(Lproduct) > lengthof(Lproduct83) ?
+                  lengthof(Lproduct) : lengthof(Lproduct83)];
     mtp_byte_t device_version_length;
     wchar_t device_version[lengthof(Ldevice_version)];
     mtp_byte_t serial_number_length;
@@ -1050,19 +1051,19 @@ static uint16_t compute_checksum(
 }
 
 static void get_datetime(
-        wchar_t result[lengthof(Lfactory_datetime)]) {
+        datetime_t *result) {
     uint16_t year;
-    uint8_t month, day, hour, minute, second,
-        i = lengthof(Lfactory_datetime);
-    char string[lengthof(Lfactory_datetime)],
-        *pointer = string;
+    uint8_t month, day, hour, minute, second;
+    char string[lengthof(Lfactory_datetime)];
     boot_GetDate(&day, &month, &year);
     boot_GetTime(&second, &minute, &hour);
-    sprintf(string, "%04u%02u%02uT%02u%02u%02u",
-            year, month, day, hour, minute, second);
-    do
-        *(char *)result++ = *pointer++;
-    while (--i);
+    int count =
+        snprintf(string, lengthof(string),
+                 "%04u%02u%02uT%02u%02u%02u",
+                 year, month, day, hour, minute, second);
+    result->length = count <= 0 ? 0 : count + 1;
+    for (mtp_byte_t i = 0; i != result->length; ++i)
+        result->string[i] = string[i];
 }
 
 static int delete_object(
@@ -2297,7 +2298,11 @@ int main(void) {
             FOR_EACH_SUPP_OPR(LIST_SUPP_OPR)
         },
         .events_supported_length = lengthof(device_info.events_supported),
-        .events_supported = {},
+        .events_supported = {
+#define LIST_SUPP_EVT(name) \
+            MTP_EVT_##name,
+            FOR_EACH_SUPP_EVT(LIST_SUPP_EVT)
+        },
         .device_properties_length = lengthof(device_info.device_properties),
         .device_properties = {
 #define LIST_SUPP_DP(type, name, form) \
@@ -2318,14 +2323,8 @@ int main(void) {
         },
         .manufacturer_length = lengthof(device_info.manufacturer),
         .manufacturer = Lmanufacturer,
-        .model_length = lengthof(Lproduct),
-        .model = Lproduct,
-        .device_version_length = lengthof(device_info.device_version),
-        .device_version = Ldevice_version,
-        .serial_number_length = lengthof(device_info.serial_number),
-        .serial_number = Lserial_number Lserial_number,
     };
-#define DEFINE_STORAGE_INFO(name)                                \
+#define DEFINE_STORAGE_INFO(name)                            \
     static name##_mtp_storage_info_t name##_storage_info = { \
         .storage_type = MTP_ST_FIXED_RAM,                    \
         .filesystem_type = MTP_FT_GENERIC_FLAT,              \
@@ -2343,7 +2342,7 @@ int main(void) {
     FOR_EACH_STORAGE(DEFINE_STORAGE_INFO)
     /* Standard USB Descriptors */
     FOR_EACH_STRING_DESCRIPTOR(DEFINE_STRING_DESCRIPTOR)
-    DEFINE_STRING_DESCRIPTOR(const, product84)
+    DEFINE_STRING_DESCRIPTOR(const, product83)
     const static usb_string_descriptor_t *strings[] = {
 #define ADDRESSOF_STRING_DESCRIPTOR(const, name) &name,
         FOR_EACH_STRING_DESCRIPTOR(ADDRESSOF_STRING_DESCRIPTOR)
@@ -2426,7 +2425,7 @@ int main(void) {
         .bMaxPacketSize0 = 0x40u,
         .idVendor = 0x0451u,
         .idProduct = 0xE010u,
-        .bcdDevice = 0x260u, /* 2.60 */
+        .bcdDevice = 0x240u, /* 2.40 */
         .iManufacturer = Imanufacturer,
         .iProduct = Iproduct,
         .iSerialNumber = Iserial_number,
@@ -2440,34 +2439,68 @@ int main(void) {
         .strings = strings,
     };
     const system_info_t *info = os_GetSystemInfo();
+    for (mtp_byte_t i = 0; i != MTP_MAX_PENDING_EVENTS; ++i)
+        global.events[i].container.type = MTP_BT_EVENT;
+    mtp_byte_t *device_info_strings = &device_info.model_length;
+    if (info->hardwareType & 1) {
+        *device_info_strings++ =
+            lengthof(Lproduct83);
+        memcpy(device_info_strings,
+               Lproduct83,
+               sizeof(Lproduct83));
+        device_info_strings +=
+            sizeof(Lproduct83);
+        *(mtp_byte_t *)&device.bcdDevice =
+            0x60; /* 2.60 */
+        strings[Iproduct - 1] = &product83;
+        var_extensions[0x23][0] = 'p';
+    } else {
+        *device_info_strings++ =
+            lengthof(Lproduct);
+        memcpy(device_info_strings,
+               Lproduct,
+               sizeof(Lproduct));
+        device_info_strings +=
+            sizeof(Lproduct);
+    }
+    {
+        char version[lengthof(Ldevice_version)];
+        int count =
+            snprintf(version, lengthof(version),
+                     "%u.%u.%u.%04u",
+                     info->osMajorVersion,
+                     info->osMinorVersion,
+                     info->osRevisionVersion,
+                     info->osBuildVersion);
+        mtp_byte_t size = count <= 0 ? 0 : count + 1;
+        *device_info_strings++ = size;
+        for (mtp_byte_t i = 0; i != size; ++i) {
+            *device_info_strings++ = version[i];
+            device_info_strings++;
+        }
+    }
+    *device_info_strings++ =
+        lengthof(Lserial_number Lserial_number);
+    memcpy(device_info_strings,
+           Lserial_number,
+           sizeof(Lserial_number) -
+           sizeof(L'\0'));
+    device_info_strings +=
+        sizeof(Lserial_number Lserial_number);
+    global.device_info = &device_info;
+    global.device_info_size =
+        device_info_strings -
+        (mtp_byte_t *)&device_info;
+#define SET_STORAGE_INFO_PTR(name) \
+    global.name##_storage_info = &name##_storage_info;
+    FOR_EACH_STORAGE(SET_STORAGE_INFO_PTR)
     wchar_t *serial_numbers[] = {
         &serial_number.bString[2 * lengthof(info->calcid)],
-        &device_info.serial_number[4 * lengthof(info->calcid)],
+        (wchar_t *)device_info_strings - 1,
 #define LIST_STORAGE_INFO_SERIAL(name) \
         &name##_storage_info.volume_identifier[2 * lengthof(info->calcid)],
         FOR_EACH_STORAGE(LIST_STORAGE_INFO_SERIAL)
     };
-    for (mtp_byte_t i = 0; i != MTP_MAX_PENDING_EVENTS; ++i)
-        global.events[i].container.type = MTP_BT_EVENT;
-    if (info->hardwareType & 1)
-        global.device_info_size = sizeof(mtp_device_info_t);
-    else {
-        *(mtp_byte_t *)&device.bcdDevice = 0x40; /* 2.40 */
-        device_info.model_length = lengthof(Lproduct84);
-        memcpy(device_info.model, Lproduct84, sizeof(Lproduct84));
-        memmove(&device_info.model[lengthof(Lproduct84)],
-                &device_info.device_version_length,
-                sizeof(mtp_device_info_t) -
-                offsetof(mtp_device_info_t, device_version_length));
-        global.device_info_size = sizeof(mtp_device_info_t) -
-            sizeof(Lproduct) + sizeof(Lproduct84);
-        strings[Iproduct - 1] = &product84;
-        var_extensions[0x23][0] = 'e';
-    }
-    global.device_info = &device_info;
-#define SET_STORAGE_INFO_PTR(name) \
-    global.name##_storage_info = &name##_storage_info;
-    FOR_EACH_STORAGE(SET_STORAGE_INFO_PTR)
     for (mtp_byte_t i = 2 * lengthof(info->calcid); i; ) {
         mtp_byte_t nibble = info->calcid[--i >> 1];
         if (!(i & 1))
