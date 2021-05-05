@@ -234,6 +234,11 @@ _arc_unarc_var:
 	ex	(sp),iy
 	push	de
 .enter:
+	ld	a,(de)
+	cp	a,'A'
+	ret	c
+	cp	a,ti.tAns
+	ret	z
 	ld	hl,.return
 	call	ti.PushErrorHandler
 	lea	hl,iy
