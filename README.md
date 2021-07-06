@@ -13,7 +13,7 @@ PTP or MTP transfer software.
 - Android 11 using the builtin Files application, check notifications after connecting to open.
 
 ## Installation
-1. Send [TRANSFER.8xp release](https://github.com/jacobly0/transfer/releases/latest) and [nightly clibs.8xg from usbdrvce branch](https://jacobly.com/a/toolchain/usbdrvce/clibs.zip) to your calculator using other transfer software.
+1. Send [TRANSFER.8xp release](https://github.com/jacobly0/transfer/releases/latest) and [nightly clibs.8xg from usbdrvce branch](https://jacobly.com/artifact?repo=toolchain&branch=usbdrvce&file=clibs) to your calculator using other transfer software.
 1. Run `Asm(prgmTRANSFER)` and then plug-and-play with a usb cable to supported OSes, or using supported software.
 1. The screen should display a debug log that can be ignored unless things go wrong, in which case the last few lines should be reported if there is an issue.
 1. Press `clear` to exit.
