@@ -1181,6 +1181,7 @@ static int send_object(
             version = entry->version;
             flag = entry->flag;
         }
+        (void)version;
         flag &= global->transaction.pending
             .send_object.mask;
         flag |= global->transaction.pending

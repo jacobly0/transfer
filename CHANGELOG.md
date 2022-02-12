@@ -10,3 +10,6 @@
 ## v0.0.3b
 - Use new usbdrvce error handling features.
 - Improve build system.
+
+## v0.0.4b
+- Recompile for new usbdrvce.
